@@ -4,16 +4,40 @@ namespace UraniumLang {
 
   static std::unique_ptr<IRBuilder<>> Builder = std::make_unique<IRBuilder<>>(*Context);
 
-  Value *VarDefStmtAST::Generate() {
-    if (m_Expr) { // Define and set
-      return m_Expr->Generate();
-    }
-    return nullptr;
+  Value *VarDefExprAST::Generate() {
+    AllocaInst *OldBinding;
+
+    Value *InitVal 
+      = m_Expr == nullptr ? ConstantFP::get(*Context, APFloat(0.0))
+        : m_Expr->Generate();
+    if (!InitVal) throw std::runtime_error("Failed!");
+
+    AllocaInst *Alloca = nullptr;
+    Function *TheFunction = Builder->GetInsertBlock() ? Builder->GetInsertBlock()->getParent() : GlobalScope;
+    Alloca = CreateEntryBlockAlloca(TheFunction, m_Name);
+    
+    if (!Alloca) throw std::runtime_error("Failed to VarDef!");
+    Builder->CreateStore(InitVal, Alloca);
+
+    OldBinding = NamedValues[m_Name];
+
+    NamedValues[m_Name] = Alloca;
+
+    NamedValues[m_Name] = OldBinding;
+
+    return OldBinding;
+  }
+
+  Value *VariableExprAST::Generate() {
+    AllocaInst *A = NamedValues[m_Name];
+    if (!A) throw std::runtime_error("Unknow variable name: \"" + m_Name + "\""); // TODO: Make exception
+    return Builder->CreateLoad(A->getAllocatedType(), A, m_Name.c_str());
   }
 
   Value *ProgramAST::Generate() {
     Value *val = nullptr;
     for (auto &stmt : m_Stmts) val = stmt->Generate();
+    TheModule->print(errs(), nullptr);
     return val;
   }
 
@@ -27,6 +51,13 @@ namespace UraniumLang {
     Context = std::make_unique<LLVMContext>();
     TheModule = std::make_unique<Module>("UraniumLang JIT", *Context);
     Builder = std::make_unique<IRBuilder<>>(*Context);
+    // Global Scope (for global variables)
+    {
+      FunctionType *FT = FunctionType::get(Type::getVoidTy(*Context), {}, false);
+      GlobalScope = Function::Create(FT, Function::PrivateLinkage, "global", TheModule.get());
+      BasicBlock *BB = BasicBlock::Create(*Context, "entry", GlobalScope);
+      Builder->SetInsertPoint(BB);
+    }
 
     std::unique_ptr<ProgramAST> program 
       = ParseProgram();
@@ -45,25 +76,30 @@ namespace UraniumLang {
     if (m_CurTok.type == Token::Type::TOKN_ID) {
       auto tok = m_CurTok;
       if (peek().type == Token::Type::TOKN_ID) {
-        auto varDef = std::make_unique<VarDefStmtAST>(tok, m_CurTok.value.value());
-        if (consume(Token::Type::TOKN_EQUALS)) { varDef->SetExpr(ParseExpr()); if (!consume(Token::Type::TOKN_SEMI)) { throw std::runtime_error("Expected TOKN_SEMI but instead got " + Token::ToString(m_CurTok.type)); } }
+        auto varDef = std::make_unique<VarDefExprAST>(tok, m_CurTok.value.value());
+        if (consume(Token::Type::TOKN_EQUALS)) { varDef->SetExpr(ParseExpr()); if (!consume(Token::Type::TOKN_SEMI)) { throw ParserUnexpectedTokEx(Token::Type::TOKN_SEMI, m_CurTok); } }
         else if (m_CurTok.type != Token::Type::TOKN_SEMI)
-          throw std::runtime_error("Expected TOKN_SEMI or TOKN_EQUALS, instead got " 
-            + Token::ToString(m_CurTok.type));
+          throw ParserUnexpectedTokEx(Token::Type::TOKN_SEMI, m_CurTok);
         return varDef;
+      } 
+      else if (m_CurTok.type == Token::Type::TOKN_LPAREN) {
+        // TODO: Function Call
       }
+    } else {
+      throw ParserUnexpectedTokEx(Token::Type::TOKN_ID, m_CurTok);
     }
     return nullptr;
   }
 
   std::unique_ptr<ExprAST> Parser::ParseExpr() {
+    if (peek().type == Token::Type::TOKN_ID) return std::make_unique<VariableExprAST>(m_CurTok.value.value());
     auto lhs = ParseTerm();
     if (!lhs) {return nullptr;}
     return std::move(lhs);
   }
 
   std::unique_ptr<TermAST> Parser::ParseTerm() {
-    Token::Type type = peek().type;
+    Token::Type type = m_CurTok.type;
     if (type == Token::Type::TOKN_INT || type == Token::Type::TOKN_ID) {
       return std::make_unique<TermAST>(m_CurTok);
     }

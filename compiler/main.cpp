@@ -9,10 +9,23 @@ int printHelp(char *path) {
   return EXIT_FAILURE;
 }
 
+int handleException(const char *what) {
+  fprintf(stderr, "%s\n", what);
+  delete []what;
+  return 1;
+}
+
 int main(int argc, char** argv) {
   if (argc < 2) return printHelp(argv[0]);
   std::unique_ptr<Parser> parser = std::make_unique<Parser>("test.ulang");
-  auto program = parser->Parse();
-  if (argc > 2) program->Generate();
+  std::unique_ptr<ProgramAST> programAST = nullptr;
+  try {
+    programAST = parser->Parse();
+  } catch (ParserUnexpectedTokEx ex) {
+    return handleException(ex.what());
+  } catch (ParserException ex) {
+    return handleException(ex.what());
+  }
+  programAST->Generate();
   return 0;
 }

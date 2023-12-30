@@ -10,13 +10,14 @@ namespace UraniumLang {
     enum class Type {
       TOKN_ID,
       TOKN_INT, TOKN_STRING, TOKN_CHAR,
-      TOKN_LPARAM, TOKN_RPARAM, TOKN_LBRACE, TOKN_RBRACE, TOKN_LBRACKET, TOKN_RBRACKET,
+      TOKN_LPAREN, TOKN_RPAREN, TOKN_LBRACE, TOKN_RBRACE, TOKN_LBRACKET, TOKN_RBRACKET,
       TOKN_LT, TOKN_GT, // TOKN_LessThan (<), TOKN_GraterThank (>)
       TOKN_SEMI, TOKN_COLON,
       TOKN_EQUALS, TOKN_PLUS, TOKN_MINUS, TOKN_STAR, TOKN_FSLASH, TOKN_EXMARK, TOKN_QUMARK,
       TOKN_EOF
     } type;
     std::optional<std::string> value;
+    int line, col;
     static std::string ToString(Type type) {
       switch (type)
       {
@@ -24,8 +25,8 @@ namespace UraniumLang {
       case Type::TOKN_INT:      return "TOKN_INT";
       case Type::TOKN_STRING:   return "TOKN_STRING";
       case Type::TOKN_CHAR:     return "TOKN_CHAR";
-      case Type::TOKN_LPARAM:   return "TOKN_LPARAM";
-      case Type::TOKN_RPARAM:   return "TOKN_RPARAM";
+      case Type::TOKN_LPAREN:   return "TOKN_LPAREN";
+      case Type::TOKN_RPAREN:   return "TOKN_RPAREN";
       case Type::TOKN_LBRACE:   return "TOKN_LBRACE";
       case Type::TOKN_RBRACE:   return "TOKN_RBRACE";
       case Type::TOKN_LBRACKET: return "TOKN_LBRACKET";

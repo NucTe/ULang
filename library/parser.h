@@ -5,18 +5,69 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 #include <memory>
 
-#include <llvm/IR/Value.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Passes/StandardInstrumentations.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Scalar/Reassociate.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/Utils.h>
 
 using namespace llvm;
 
 namespace UraniumLang {
 
+  class ParserException : public std::exception {
+  public:
+    inline ParserException(std::string name, std::string description) : m_Name(name), m_Description(description) {}
+    virtual ~ParserException() = default;
+    inline const char *what() const _GLIBCXX_TXN_SAFE_DYN _GLIBCXX_NOTHROW override {
+      const char *strTemplate = "[Parser] (%s): %s";
+      char *buf = new char[1024];
+      sprintf(buf, strTemplate, m_Name.c_str(), m_Description.c_str());
+      return buf;
+    }
+  private:
+    std::string m_Name, m_Description;
+  };
+
+  class ParserUnexpectedTokEx : public ParserException {
+  public:
+    inline ParserUnexpectedTokEx(Token::Type expected, Token got)
+      : ParserException("Unexpected Token Exception", "Expected token " + Token::ToString(expected) + ", but got " + Token::ToString(got.type) + " at " + std::to_string(got.line) + ":" + std::to_string(got.col)) {}
+  };
+
   inline static std::unique_ptr<LLVMContext> Context{};
   inline static std::unique_ptr<Module> TheModule{};
-  inline static std::unordered_map<std::string, Value*> NamedValues{}; // name, value
+  inline static std::map<std::string, AllocaInst*> NamedValues{}; // name, value
+
+  inline static Function *GlobalScope = nullptr;
+
+  static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
+                                            StringRef VarName) {
+    IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                      TheFunction->getEntryBlock().begin());
+    return TmpB.CreateAlloca(Type::getDoubleTy(*Context), nullptr, VarName);
+  }
 
   class StmtAST {
   public:
@@ -47,15 +98,23 @@ namespace UraniumLang {
     Token m_Token{};
   };
 
-  class VarDefStmtAST : public StmtAST {
+  class VarDefExprAST : public ExprAST {
   public:
-    inline VarDefStmtAST(Token type, const std::string &name) : m_Type(type), m_Name(name) {}
+    inline VarDefExprAST(Token type, const std::string &name) : m_Type(type), m_Name(name) {}
     inline void SetExpr(std::unique_ptr<ExprAST> expr) { m_Expr = std::move(expr); }
     virtual Value *Generate() override;
   private:
     Token m_Type{};
     std::string m_Name{};
     std::unique_ptr<ExprAST> m_Expr = nullptr;
+  };
+
+  class VariableExprAST : public ExprAST {
+  public:
+    inline VariableExprAST(const std::string &name) : m_Name(name) {}
+    virtual Value *Generate() override;
+  private:
+    std::string m_Name{};
   };
 
   class ProgramAST : public StmtAST {
@@ -86,10 +145,59 @@ namespace UraniumLang {
     auto t = peek().type;
     return t == type;
   }
+  inline void expectToken(Token::Type type) {
+    if (peek().type != type) throw ParserUnexpectedTokEx(type, m_CurTok); 
+  }
   private:
   Token m_CurTok{};
   std::unique_ptr<Lexer> m_Lexer{};
   };
+
+  // std::vector<AllocaInst *> OldBindings;
+
+  // Function *TheFunction = Builder->GetInsertBlock()->getParent();
+
+  // // Register all variables and emit their initializer.
+  // for (unsigned i = 0, e = VarNames.size(); i != e; ++i) {
+  //   const std::string &VarName = VarNames[i].first;
+  //   ExprAST *Init = VarNames[i].second.get();
+
+  //   // Emit the initializer before adding the variable to scope, this prevents
+  //   // the initializer from referencing the variable itself, and permits stuff
+  //   // like this:
+  //   //  var a = 1 in
+  //   //    var a = a in ...   # refers to outer 'a'.
+  //   Value *InitVal;
+  //   if (Init) {
+  //     InitVal = Init->codegen();
+  //     if (!InitVal)
+  //       return nullptr;
+  //   } else { // If not specified, use 0.0.
+  //     InitVal = ConstantFP::get(*TheContext, APFloat(0.0));
+  //   }
+
+  //   AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
+  //   Builder->CreateStore(InitVal, Alloca);
+
+  //   // Remember the old variable binding so that we can restore the binding when
+  //   // we unrecurse.
+  //   OldBindings.push_back(NamedValues[VarName]);
+
+  //   // Remember this binding.
+  //   NamedValues[VarName] = Alloca;
+  // }
+
+  // // Codegen the body, now that all vars are in scope.
+  // Value *BodyVal = Body->codegen();
+  // if (!BodyVal)
+  //   return nullptr;
+
+  // // Pop all our variables from scope.
+  // for (unsigned i = 0, e = VarNames.size(); i != e; ++i)
+  //   NamedValues[VarNames[i].first] = OldBindings[i];
+
+  // // Return the body computation.
+  // return BodyVal;
 
 }
 

@@ -4,7 +4,7 @@ COMPILER_DIR = compiler
 RUNTIME_DIR = runtime
 
 CXX = clang++
-CXXFLAGS = `llvm-config --cxxflags` -Wall -Wextra -std=c++17 -fexceptions
+CXXFLAGS = `llvm-config --cxxflags` -std=c++17 -fexceptions
 
 LIB_OBJ_DIR = $(BIN_DIR)/$(LIBRARY_DIR)/obj
 COMP_OBJ_DIR = $(BIN_DIR)/$(COMPILER_DIR)/obj

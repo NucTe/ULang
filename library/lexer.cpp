@@ -28,6 +28,8 @@ namespace UraniumLang {
     Token tok{};
     tok.type = Token::Type::TOKN_EOF;
     skipSpaces();
+    tok.line = m_Line;
+    tok.col = m_Column;
     if (m_Index >= m_Content.size() && m_Char == '\0') return tok;
 
     if (isdigit(m_Char)) {
@@ -79,8 +81,8 @@ namespace UraniumLang {
 
     else {
       switch (m_Char) {
-      case '(': { tok.type = Token::Type::TOKN_LPARAM; } break;
-      case ')': { tok.type = Token::Type::TOKN_RPARAM; } break;
+      case '(': { tok.type = Token::Type::TOKN_LPAREN; } break;
+      case ')': { tok.type = Token::Type::TOKN_RPAREN; } break;
       case '{': { tok.type = Token::Type::TOKN_LBRACE; } break;
       case '}': { tok.type = Token::Type::TOKN_RBRACE; } break;
       case '[': { tok.type = Token::Type::TOKN_LBRACKET; } break;
