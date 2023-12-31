@@ -86,5 +86,6 @@
     "thread": "cpp",
     "*.ipp": "cpp",
     "any": "cpp"
-  }
+  },
+  "C_Cpp.default.compilerPath": "/usr/bin/clang++"
 }

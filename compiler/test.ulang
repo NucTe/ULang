@@ -1,1 +1,2 @@
 int meow = 69;
+int x = meow;

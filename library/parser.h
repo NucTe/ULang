@@ -118,6 +118,16 @@ namespace UraniumLang {
     std::string m_Name{};
   };
 
+  class BinOpExprAST : public ExprAST {
+  public:
+    BinOpExprAST(std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs, Token::Type opcode)
+      : m_LHS(std::move(lhs)), m_RHS(std::move(rhs)), m_OpCode(opcode) {}
+    virtual Value *Generate() override;
+  private:
+    std::unique_ptr<ExprAST> m_LHS{}, m_RHS{};
+    Token::Type m_OpCode = Token::Type::TOKN_EOF;
+  };
+
   class ProgramAST : public StmtAST {
   public:
     inline ProgramAST(std::vector<std::unique_ptr<StmtAST>> stmts = {}) : m_Stmts(std::move(stmts)) {}
@@ -126,6 +136,21 @@ namespace UraniumLang {
   private:
     std::vector<std::unique_ptr<StmtAST>> m_Stmts;
   };
+
+  inline static std::map<Token::Type, int> BinopPrecedence = {
+    { Token::Type::TOKN_PLUS, 10 },   // Add
+    { Token::Type::TOKN_MINUS, 10 },  // Sub
+    { Token::Type::TOKN_STAR, 20 },   // Mul
+    { Token::Type::TOKN_FSLASH, 20 }, // Div
+  };
+
+  static int GetTokPrecedence(Token::Type type) {
+    int typeI = (int)type;
+    if (typeI < 15 && typeI > 18) return -1; // 15 = TOKN_PLUS, 18 = TOKN_FSLASH (/)
+    int TokPrec = BinopPrecedence[type];
+    if (TokPrec <= 0) return -1;
+    return TokPrec;
+  }
 
   class Parser {
   public:
@@ -138,13 +163,13 @@ namespace UraniumLang {
   private:
   std::unique_ptr<ProgramAST> ParseProgram();
   std::unique_ptr<StmtAST> ParseStmt();
+  std::unique_ptr<ExprAST> ParseBinOpRHS(int prec, std::unique_ptr<ExprAST> LHS);
   std::unique_ptr<ExprAST> ParseExpr();
   std::unique_ptr<TermAST> ParseTerm();
   private:
   inline Token peek() { return (m_CurTok = m_Lexer->GetTok()); }
   inline bool consume(Token::Type type) {
-    auto t = peek().type;
-    return t == type;
+    return peek().type == type;
   }
   inline void expectToken(Token::Type type) {
     if (peek().type != type) throw ParserUnexpectedTokEx(type, m_CurTok); 
