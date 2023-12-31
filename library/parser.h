@@ -59,8 +59,7 @@ namespace UraniumLang {
   inline static std::unique_ptr<LLVMContext> Context{};
   inline static std::unique_ptr<Module> TheModule{};
   inline static std::map<std::string, AllocaInst*> NamedValues{}; // name, value
-
-  inline static Function *GlobalScope = nullptr;
+  inline static std::map<std::string, GlobalVariable*> GlobalValues{}; // name, value
 
   static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                             StringRef VarName) {
@@ -103,6 +102,8 @@ namespace UraniumLang {
     inline VarDefExprAST(Token type, const std::string &name) : m_Type(type), m_Name(name) {}
     inline void SetExpr(std::unique_ptr<ExprAST> expr) { m_Expr = std::move(expr); }
     virtual Value *Generate() override;
+  private:
+    GlobalVariable *CreateGlobal();
   private:
     Token m_Type{};
     std::string m_Name{};

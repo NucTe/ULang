@@ -6,26 +6,53 @@ namespace UraniumLang {
 
   Value *VarDefExprAST::Generate() {
     AllocaInst *OldBinding;
+    GlobalVariable *OldGBinding;
 
     Value *InitVal 
       = m_Expr == nullptr ? ConstantFP::get(*Context, APFloat(0.0))
         : m_Expr->Generate();
     if (!InitVal) throw std::runtime_error("Failed!");
 
-    AllocaInst *Alloca = nullptr;
-    Function *TheFunction = Builder->GetInsertBlock() ? Builder->GetInsertBlock()->getParent() : GlobalScope;
-    Alloca = CreateEntryBlockAlloca(TheFunction, m_Name);
-    
-    if (!Alloca) throw std::runtime_error("Failed to VarDef!");
-    Builder->CreateStore(InitVal, Alloca);
+    bool isLocal;
+    std::optional<AllocaInst *> Alloca;
+    std::optional<GlobalVariable *> GlobalVar;
+    if ((isLocal = Builder->GetInsertBlock())) {
+      Function *TheFunction = Builder->GetInsertBlock()->getParent();
+      Alloca = CreateEntryBlockAlloca(TheFunction, m_Name);
+      Builder->CreateStore(InitVal, Alloca.value());
+    }
+    else {
+      GlobalVar = CreateGlobal();
+    }
 
-    OldBinding = NamedValues[m_Name];
+    if (!(Alloca.has_value() || GlobalVar.has_value())) throw std::runtime_error("Failed to VarDef!");
 
-    NamedValues[m_Name] = Alloca;
+    if (isLocal) {
+      OldBinding = NamedValues[m_Name];
 
-    NamedValues[m_Name] = OldBinding;
+      NamedValues[m_Name] = Alloca.value();
 
-    return OldBinding;
+      NamedValues[m_Name] = OldBinding;
+    } 
+    else {
+      OldGBinding = GlobalValues[m_Name];
+
+      GlobalValues[m_Name] = GlobalVar.value();
+
+      GlobalValues[m_Name] = OldGBinding;
+    }
+
+    return (isLocal ? (Value*)OldBinding : (Value*)OldGBinding);
+  }
+
+  GlobalVariable *VarDefExprAST::CreateGlobal() {
+    TheModule->getOrInsertGlobal(m_Name, Builder->getDoubleTy());
+    GlobalVariable* gVar = TheModule->getNamedGlobal(m_Name);
+    gVar->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    gVar->setAlignment(Align(alignof(double)));
+    ConstantFP *init = ConstantFP::get(*Context, APFloat(0.0));
+    gVar->setInitializer(init);
+    return gVar;
   }
 
   Value *VariableExprAST::Generate() {
@@ -51,13 +78,6 @@ namespace UraniumLang {
     Context = std::make_unique<LLVMContext>();
     TheModule = std::make_unique<Module>("UraniumLang JIT", *Context);
     Builder = std::make_unique<IRBuilder<>>(*Context);
-    // Global Scope (for global variables)
-    {
-      FunctionType *FT = FunctionType::get(Type::getVoidTy(*Context), {}, false);
-      GlobalScope = Function::Create(FT, Function::PrivateLinkage, "global", TheModule.get());
-      BasicBlock *BB = BasicBlock::Create(*Context, "entry", GlobalScope);
-      Builder->SetInsertPoint(BB);
-    }
 
     std::unique_ptr<ProgramAST> program 
       = ParseProgram();
