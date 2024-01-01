@@ -1,7 +1,10 @@
 #ifndef ULANG_LEXER_H
 #define ULANG_LEXER_H
 
+#include "utilities.h" // TODO: Use
+
 #include <iostream>
+#include <vector>
 #include <optional>
 
 namespace UraniumLang {
@@ -54,9 +57,9 @@ namespace UraniumLang {
   Lexer(const std::string &filepath);
 
   void SetContent(const std::string &content);
-
-  Token GetTok();
+  std::vector<Token> GetTokens();
   private:
+  Token GetTok();
   void advance();
   void skipSpaces();
   private:

@@ -24,6 +24,20 @@ namespace UraniumLang {
     m_Content = content;
   }
 
+  std::vector<Token> Lexer::GetTokens() {
+    std::vector<Token> tokens{};
+    bool loop = true;
+    while (loop) {
+      auto tokn = GetTok();
+      tokens.push_back(tokn);
+      if (tokn.type == Token::Type::TOKN_EOF) loop = false;
+    }
+
+    return tokens;
+  }
+
+  // private:
+
   Token Lexer::GetTok() {
     Token tok{};
     tok.type = Token::Type::TOKN_EOF;
@@ -105,8 +119,6 @@ namespace UraniumLang {
 
     return tok;
   }
-
-  // private:
 
   void Lexer::advance() {
     if (m_Content.size() <= m_Index && m_Char == '\0') return;

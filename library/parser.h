@@ -60,7 +60,7 @@ namespace UraniumLang {
     std::vector<uptr<StmtNode>> m_Stmts{};
   };
 
-  // this is the same as scope lmfao
+  // this is the same as scope lmfao, guess I could make it child of ScopeNode but nope
   class ProgNode : public StmtNode {
   public:
     ProgNode(std::vector<uptr<StmtNode>> stmts)
@@ -91,17 +91,20 @@ namespace UraniumLang {
   Parser(const std::string &filepath);
   ~Parser() = default;
 
-  //Result<uptr<ProgNode>> Parse();
+  Result<uptr<ProgNode>> Parse();
   private: // Functions
-  
+  Result<uptr<StmtNode>> ParseStmt();
   private: // Variables
-  inline Token peek() { return (m_CurTok = m_Lexer->GetTok()); }
+  inline Token peek(int off = 0) { return m_Tokens[m_Index + off]; }
+  inline Token consume() { return m_Tokens[m_Index++]; }
   inline Result<Token> consume(Token::Type type) {
-    if (peek().type == type) return Result<Token>(m_CurTok);
-    else return Result<Token>(Error());
+    if (consume().type == type) return Result<Token>(m_CurTok);
+    else return Result<Token>(UraniumLang::Error(Error::ErrCode::FAILED));
   }
   private:
+  size_t m_Index = 0;
   Token m_CurTok{};
+  std::vector<Token> m_Tokens{};
   std::unique_ptr<Lexer> m_Lexer{};
   };
 

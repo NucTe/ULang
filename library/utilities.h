@@ -12,6 +12,7 @@ namespace UraniumLang {
 
   struct Error {
     enum ErrCode {
+      NOT_IMPL = -1,
       SUCCESS = 0,
       FAILED = 1,
     };
@@ -24,6 +25,9 @@ namespace UraniumLang {
 
     Error(ErrCode code) 
       : Code(code) {}
+
+    bool operator ()() const { return Code == SUCCESS; }
+    bool operator !() const { return Code != SUCCESS; }
   };
 
   template <typename T>
@@ -33,7 +37,10 @@ namespace UraniumLang {
     Result(T value) : m_Result(value) {}
     Result(Error err) : m_Error(err) {}
   
-    inline std::pair<bool, const T&> operator()() const { return { m_Error.Code == 0 && m_Result.has_value(), m_Result.has_value() ? m_Result.value() : T() }; }
+    inline void SetResult(T result) { m_Result = result; }
+    inline void SetError(Error err) { m_Error = err; }
+
+    inline std::pair<Error, const T&> operator ()() const { return { m_Error, m_Result.has_value() ? m_Result.value() : (const T&)T() }; }
     inline Error GetErr() const { return m_Error; }
   private:
     std::optional<T> m_Result{};
