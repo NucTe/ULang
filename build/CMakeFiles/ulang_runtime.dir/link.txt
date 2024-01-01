@@ -1,0 +1,2 @@
+/usr/bin/ar qc bin/libulangrun.a CMakeFiles/ulang_runtime.dir/runtime/main.cpp.o
+/usr/bin/ranlib bin/libulangrun.a

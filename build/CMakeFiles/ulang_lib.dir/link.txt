@@ -1,0 +1,2 @@
+/usr/bin/ar qc bin/libulang.a CMakeFiles/ulang_lib.dir/library/lexer.cpp.o CMakeFiles/ulang_lib.dir/library/parser.cpp.o
+/usr/bin/ranlib bin/libulang.a
