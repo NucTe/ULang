@@ -24,6 +24,13 @@ namespace UraniumLang {
   private:
   };
 
+  class TermNode : public ExprNode {
+  public:
+    TermNode(Token tokn) : m_Tokn(tokn) {}
+  private:
+    Token m_Tokn{};
+  };
+
   class FuncCallNode : public StmtNode {
   public:
     FuncCallNode(const std::string &funcName, std::vector<uptr<ExprNode>> arguments) 
@@ -47,16 +54,19 @@ namespace UraniumLang {
 
   class VarDefNode : public StmtNode {
   public:
-    VarDefNode(uptr<TypeNode> type, const std::string &name, uptr<ExprNode> expr)
-      : m_Type(std::move(type)), m_Name(name), m_Expr(std::move(expr)) {}
+    VarDefNode(uptr<TypeNode> type, const std::string &name)
+      : m_Type(std::move(type)), m_Name(name), m_Expr(nullptr) {}
 
-    inline const uptr<TypeNode> &GetType() const { return m_Type; }
-    inline const std::string &GetName() const { return m_Name; }
-    inline const ExprNode &GetExpr() const { return *m_Expr.get(); }
+    inline void SetExpr(uptr<ExprNode> expr) { m_Expr = std::move(expr); }
+
+    inline const uptr<TypeNode>& GetType() const { return m_Type; }
+    inline const std::string& GetName() const { return m_Name; }
+    inline const uptr<ExprNode>& GetExpr() const { return m_Expr; }
+
   private:
     uptr<TypeNode> m_Type{};
     std::string m_Name{};
-    uptr<ExprNode> m_Expr{};
+    uptr<ExprNode> m_Expr;
   };
 
   class ScopeNode : public StmtNode {
@@ -114,6 +124,7 @@ namespace UraniumLang {
   private: // Functions
   
   Result<uptr<TypeNode>> ParseType();
+  Result<uptr<ExprNode>> ParseExpr();
   Result<uptr<StmtNode>> ParseStmt();
   
   private: // Variables
@@ -127,9 +138,16 @@ namespace UraniumLang {
   }
   
   inline Result<Token> consume(Token::Type type) {
-    if (consume().type == type) return Result<Token>(m_CurTok);
+    if (m_CurTok.type == type) return Result<Token>(consume());
     return 
       Result<Token>(UraniumLang::Error(Error::ErrCode::FAILED));
+  }
+
+ inline bool tryConsume(const std::vector<Token::Type> &types) {
+    (void)consume();
+    for (auto t : types)
+      if (m_CurTok.type == t) return true;
+    return false;
   }
   
   private:

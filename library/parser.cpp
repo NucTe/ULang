@@ -35,12 +35,57 @@ namespace UraniumLang {
   Result<uptr<StmtNode>> Parser::ParseStmt() {
     Result<uptr<StmtNode>> result{};
 
-    auto type = ParseType();
-    if (type()()) {
-      std::cout << "Czesc!" << std::endl;
+    auto typeRes = ParseType();
+    if (!typeRes()) {
+      result.SetError(typeRes());
+      return result;
     }
-    else {
-      result.SetError(Error::Failed("Failed to parse statment!"));
+
+    auto nameRes = consume(Token::Type::TOKN_ID);
+    if (!nameRes()) {
+      result.SetError(Error::Failed("Failed to parse identifier!"));
+      return result;
+    }
+    auto name = nameRes.GetResult().value();
+
+    Token::Type toknt = m_CurTok.type;
+    if (toknt != Token::Type::TOKN_SEMI && toknt != Token::Type::TOKN_EQUALS) {
+      result.SetError(Error::Failed("Invalid token!"));
+      return result;
+    }
+
+    consume(); // Consume ';' or '='
+
+    if (typeRes.GetResult()) {
+        // Type is present
+      uptr<VarDefNode> varDef = std::make_unique<VarDefNode>(std::move(typeRes.GetResult().value()), *name.value);
+      std::cout << ":D" << std::endl;
+
+      if (toknt == Token::Type::TOKN_EQUALS) {
+        auto expr = ParseExpr();
+        if (!expr()) {
+          result.SetError(Error::Failed("Failed to parse expr in VarDef!"));
+          return result;
+        }
+        varDef->SetExpr(std::move(expr.GetResult().value()));
+      }
+
+      result.SetResult(std::move(varDef));
+    } else {
+      // Type is not present
+      // Handle the case where there is no type
+      result.SetError(Error::Failed("No type present!"));
+    }
+
+    return result;
+  }
+
+  Result<uptr<ExprNode>> Parser::ParseExpr() {
+    Result<uptr<ExprNode>> result{};
+    
+    if (consume().type != Token::Type::TOKN_LPAREN) result.SetResult(std::make_unique<TermNode>(m_CurTok));
+    else { // Paren Term
+      result.SetError(Error::NotImpl());
     }
 
     return result;
