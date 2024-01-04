@@ -12,7 +12,7 @@ namespace UraniumLang {
   struct Token {
     enum class Type {
       TOKN_ID,
-      TOKN_INT, TOKN_STRING, TOKN_CHAR,
+      TOKN_NUM, TOKN_STRING, TOKN_CHAR,
       TOKN_LPAREN, TOKN_RPAREN, TOKN_LBRACE, TOKN_RBRACE, TOKN_LBRACKET, TOKN_RBRACKET,
       TOKN_LT, TOKN_GT, // TOKN_LessThan (<), TOKN_GraterThank (>)
       TOKN_SEMI, TOKN_COLON,
@@ -25,7 +25,7 @@ namespace UraniumLang {
       switch (type)
       {
       case Type::TOKN_ID:       return "TOKN_ID";
-      case Type::TOKN_INT:      return "TOKN_INT";
+      case Type::TOKN_NUM:      return "TOKN_NUM";
       case Type::TOKN_STRING:   return "TOKN_STRING";
       case Type::TOKN_CHAR:     return "TOKN_CHAR";
       case Type::TOKN_LPAREN:   return "TOKN_LPAREN";
@@ -70,7 +70,7 @@ namespace UraniumLang {
   private:
     std::string m_Content = "";
     char m_Char = ' ';
-    int m_Index = 0, m_Line = 0, m_Column = 0;
+    size_t m_Index = 0, m_Line = 0, m_Column = 0;
   };
 
 }

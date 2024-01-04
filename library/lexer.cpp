@@ -47,7 +47,7 @@ namespace UraniumLang {
     if (m_Index >= m_Content.size() && m_Char == '\0') return tok;
 
     if (isdigit(m_Char)) {
-      tok.type = Token::Type::TOKN_INT;
+      tok.type = Token::Type::TOKN_NUM;
       tok.value = "";
       while (isdigit(m_Char) || m_Char == '.') {
         tok.value.value() += m_Char;

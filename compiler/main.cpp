@@ -135,11 +135,6 @@ static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
 //   return val;
 // }
 
-int handleError(UraniumLang::Error err) {
-  fprintf(stderr, "Error: %s\n", err.Description.data());
-  return err.Code;
-}
-
 int printHelp(char *path) {
   std::cout << "Usage: `" << std::string(path) << " <path>`" << std::endl;
   return 1;
@@ -151,7 +146,8 @@ int main(int argc, char** argv) {
   
   {
     auto prog = parser->Parse();
-    if (!prog()) return handleError(prog());
+    std::cout << "Parsed successfully!" << std::endl;
+    // TODO: Print AST
   }
   
   return 0;

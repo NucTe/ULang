@@ -15,76 +15,49 @@ namespace UraniumLang {
   class StmtNode {
   public:
     virtual ~StmtNode() = default;
+    virtual const std::string &kind() = 0;
   private:
   };
 
-  class ExprNode {
+  class ExprNode : public StmtNode {
   public:
     virtual ~ExprNode() = default;
+    virtual const std::string &kind() = 0;
   private:
   };
 
-  class TermNode : public ExprNode {
+  class IdentExpr : public ExprNode {
   public:
-    TermNode(Token tokn) : m_Tokn(tokn) {}
+    IdentExpr(const std::string &symbol) : m_Symbol(symbol) {}
+    virtual const std::string &kind() override { return "IdentExpr"; }
   private:
-    Token m_Tokn{};
+    std::string m_Symbol{};
   };
 
-  class FuncCallNode : public StmtNode {
+  class NumLitExpr : public ExprNode {
   public:
-    FuncCallNode(const std::string &funcName, std::vector<uptr<ExprNode>> arguments) 
-      : m_Name(funcName), m_Arguments(std::move(arguments)) {}
-  
-    inline const std::string &GetName() const { return m_Name; }
-    inline const std::vector<uptr<ExprNode>> &GetArguments() const { return m_Arguments; }
+    NumLitExpr(const Token &value) : m_Value(value) {}
+    virtual const std::string &kind() override { return "NumLitExpr"; }
   private:
-    std::string m_Name{};
-    std::vector<uptr<ExprNode>> m_Arguments{};
+    Token m_Value;
   };
 
-  class TypeNode {
+  class BinExpr : public ExprNode {
   public:
-    TypeNode() = default;
-    ~TypeNode() = default;
-    TypeNode(std::vector<Token> tokens) : m_Tokens(std::move(tokens)) {}
+    BinExpr(uptr<ExprNode> left, uptr<ExprNode> right, const std::string &op)
+      : m_Left(std::move(left)), m_Right(std::move(right)), m_Op(op) {}
+    virtual const std::string &kind() override { return "BinExpr"; }
   private:
-    std::vector<Token> m_Tokens{}; // Allow types to be (for example long long, unsigned long, etc...)
+    uptr<ExprNode> m_Left{}, m_Right{};
+    std::string m_Op{};
   };
 
-  class VarDefNode : public StmtNode {
-  public:
-    VarDefNode(uptr<TypeNode> type, const std::string &name)
-      : m_Type(std::move(type)), m_Name(name), m_Expr(nullptr) {}
-
-    inline void SetExpr(uptr<ExprNode> expr) { m_Expr = std::move(expr); }
-
-    inline const uptr<TypeNode>& GetType() const { return m_Type; }
-    inline const std::string& GetName() const { return m_Name; }
-    inline const uptr<ExprNode>& GetExpr() const { return m_Expr; }
-
-  private:
-    uptr<TypeNode> m_Type{};
-    std::string m_Name{};
-    uptr<ExprNode> m_Expr;
-  };
-
-  class ScopeNode : public StmtNode {
-  public:
-    ScopeNode(std::vector<uptr<StmtNode>> stmts)
-      : m_Stmts(std::move(stmts)) {}
-
-    inline const std::vector<uptr<StmtNode>> &GetStatements() { return m_Stmts; }
-  private:
-    std::vector<uptr<StmtNode>> m_Stmts{};
-  };
-
-  // this is the same as scope lmfao, guess I could make it child of ScopeNode but nope
   class ProgNode : public StmtNode {
   public:
     ProgNode(std::vector<uptr<StmtNode>> stmts)
       : m_Stmts(std::move(stmts)) {}
 
+    virtual const std::string &kind() override { return "ProgNode"; }
     inline const std::vector<uptr<StmtNode>> &GetStatements() { return m_Stmts; }
   private:
     std::vector<uptr<StmtNode>> m_Stmts{};
@@ -119,35 +92,30 @@ namespace UraniumLang {
   Parser(const std::string &filepath);
   ~Parser() = default;
 
-  Result<uptr<ProgNode>> Parse();
+  uptr<ProgNode> Parse();
   
   private: // Functions
+
+  void Initialize();
   
-  Result<uptr<TypeNode>> ParseType();
-  Result<uptr<ExprNode>> ParseExpr();
-  Result<uptr<StmtNode>> ParseStmt();
-  
-  private: // Variables
-  
-  inline Token peek(int off = 0) { return m_Tokens[m_Index + off]; }
-  
-  inline Token consume() { 
-    if (m_Index >= m_Tokens.size()) 
-      exit((std::cerr << "Failed to parse! Tried to reach token out of bounds." << std::endl, 1));
-    return m_CurTok = m_Tokens[++m_Index]; 
-  }
-  
-  inline Result<Token> consume(Token::Type type) {
-    if (m_CurTok.type == type) return Result<Token>(consume());
-    return 
-      Result<Token>(UraniumLang::Error(Error::ErrCode::FAILED));
+  uptr<StmtNode> ParseStmt();
+  uptr<ExprNode> ParseExpr();
+  uptr<ExprNode> ParsePrimExpr();
+
+  private:
+
+  // Get current token without advancing
+  // params:
+  //  - off: Offset (default = 0)
+  inline Token peek(size_t off = 0) {
+    return m_Tokens[m_Index+off];
   }
 
- inline bool tryConsume(const std::vector<Token::Type> &types) {
-    (void)consume();
-    for (auto t : types)
-      if (m_CurTok.type == t) return true;
-    return false;
+  // Advance and get previous token
+  inline Token advance() {
+    Token tokn = m_CurTok;
+    if (m_Tokens.size() > (m_Index+1)) m_CurTok = m_Tokens[++m_Index];
+    return tokn;
   }
   
   private:
