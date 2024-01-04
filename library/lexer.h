@@ -49,6 +49,11 @@ namespace UraniumLang {
       }
       return "<NONE>";
     }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Token& tok) {
+      return stream << "{ type: \"" << ToString(tok.type) << "\", value: \"" 
+                    << (tok.value.has_value() ? tok.value.value() : "<none>") << "\" }";
+    }
   };
 
   class Lexer {

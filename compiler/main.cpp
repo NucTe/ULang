@@ -1,5 +1,4 @@
 #include <parser.h> // Include ULang's Parser
-using namespace UraniumLang;
 
 #include <stdio.h>
 
@@ -28,8 +27,8 @@ using namespace UraniumLang;
 #include <llvm/Transforms/Utils.h>
 using namespace llvm;
 
-static uptr<LLVMContext> Context{};
-static uptr<Module> TheModule{};
+static UraniumLang::uptr<LLVMContext> Context{};
+static UraniumLang::uptr<Module> TheModule{};
 static std::map<std::string, AllocaInst*> NamedValues{};      // { name, value }
 static std::map<std::string, GlobalVariable*> GlobalValues{}; // { name, value }
 static std::unique_ptr<IRBuilder<>> Builder = std::make_unique<IRBuilder<>>(*Context);
@@ -137,23 +136,22 @@ static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
 // }
 
 int handleError(UraniumLang::Error err) {
-  int res = (int)err.Code;
   fprintf(stderr, "Error: %s\n", err.Description.data());
-  return res;
+  return err.Code;
 }
 
 int printHelp(char *path) {
   std::cout << "Usage: `" << std::string(path) << " <path>`" << std::endl;
-  return EXIT_FAILURE;
+  return 1;
 }
 
 int main(int argc, char** argv) {
   if (argc < 2) return printHelp(argv[0]);
-  std::unique_ptr<Parser> parser = std::make_unique<Parser>(argv[0]);
+  std::unique_ptr<UraniumLang::Parser> parser = std::make_unique<UraniumLang::Parser>(argv[1]);
   
   {
     auto prog = parser->Parse();
-    if (!prog().first) return handleError(prog().first);
+    if (!prog()) return handleError(prog());
   }
   
   return 0;

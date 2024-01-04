@@ -85,7 +85,9 @@
     "stop_token": "cpp",
     "thread": "cpp",
     "*.ipp": "cpp",
-    "any": "cpp"
+    "any": "cpp",
+    "regex": "cpp",
+    "scoped_allocator": "cpp"
   },
   "C_Cpp.default.compilerPath": "/usr/bin/clang++"
 }
