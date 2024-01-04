@@ -22,7 +22,7 @@ namespace UraniumLang {
 
   void Parser::Initialize() {
     m_Tokens = m_Lexer->GetTokens();
-    for (auto tokn : m_Tokens) std::cout << tokn << std::endl;
+
     m_CurTok = m_Tokens[m_Index = 0];
   }
 
@@ -31,7 +31,15 @@ namespace UraniumLang {
   }
 
   uptr<ExprNode> Parser::ParseExpr() {
-    return ParsePrimExpr();
+    auto left = ParsePrimExpr();
+
+    while (m_CurTok.type != Token::Type::TOKN_EOF && GetTokPrecedence(m_CurTok.type) >= 0) {
+      auto op = advance().type;
+      auto right = ParsePrimExpr();
+      left = std::make_unique<BinExpr>(std::move(left), std::move(right), op);
+    }
+
+    return left;
   }
 
   uptr<ExprNode> Parser::ParsePrimExpr() {

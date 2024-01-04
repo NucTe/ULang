@@ -44,12 +44,12 @@ namespace UraniumLang {
 
   class BinExpr : public ExprNode {
   public:
-    BinExpr(uptr<ExprNode> left, uptr<ExprNode> right, const std::string &op)
+    BinExpr(uptr<ExprNode> left, uptr<ExprNode> right, Token::Type op)
       : m_Left(std::move(left)), m_Right(std::move(right)), m_Op(op) {}
     virtual const std::string &kind() override { return "BinExpr"; }
   private:
     uptr<ExprNode> m_Left{}, m_Right{};
-    std::string m_Op{};
+    Token::Type m_Op{};
   };
 
   class ProgNode : public StmtNode {
