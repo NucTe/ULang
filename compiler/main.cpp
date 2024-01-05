@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
   {
     auto prog = parser->Parse();
     std::cout << "Parsed successfully!" << std::endl;
-    // TODO: Print AST
+    // TODO: Compile based on options
   }
   
   return 0;

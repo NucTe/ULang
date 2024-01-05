@@ -27,7 +27,32 @@ namespace UraniumLang {
   }
 
   uptr<StmtNode> Parser::ParseStmt() {
+    auto tokn = m_CurTok;
+    uptr<StmtNode> res = nullptr;
+
+    if (tokn.type == Token::Type::TOKN_ID) {
+      if ((res = ParseVarDecl())) return res;
+    }
+    
     return ParseExpr();
+  }
+
+  uptr<StmtNode> Parser::ParseVarDecl() {
+    auto types = ParseType();
+    if (types.empty()) return nullptr;
+    auto name = expect(Token::Type::TOKN_ID);
+    auto tokn = m_CurTok;
+    uptr<VarDeclStmt> res = nullptr;
+    if (tokn.type == Token::Type::TOKN_EQUALS) {
+      expect(Token::Type::TOKN_EQUALS);
+      auto expr = ParseExpr();
+      res = std::make_unique<VarDeclStmt>(name, std::move(expr));
+    }
+    else if (tokn.type == Token::Type::TOKN_SEMI) res = std::make_unique<VarDeclStmt>(name, nullptr);
+    else throw std::runtime_error("Unexpected token \"" + Token::ToString(m_CurTok.type) + "\", expected \"TOKN_SEMI\" or \"TOKN_EQUALS\"!");
+    expect(Token::Type::TOKN_SEMI);
+
+    return res ? std::move(res) : nullptr;
   }
 
   uptr<ExprNode> Parser::ParseExpr() {
@@ -47,14 +72,16 @@ namespace UraniumLang {
 
     switch (tknTy)
     {
-    case Token::Type::TOKN_ID: {
-      return std::make_unique<IdentExpr>(advance().value.value());
-    }
+    case Token::Type::TOKN_ID:  return std::make_unique<IdentExpr>(advance().value.value());
     case Token::Type::TOKN_NUM: return std::make_unique<NumLitExpr>(advance());
-    default: {
-      return nullptr;
+    default:                    return nullptr;
     }
-    }
+  }
+
+  std::vector<std::string> Parser::ParseType() {
+    std::vector<std::string> types{};
+    while (m_CurTok.type == Token::Type::TOKN_ID && Types.find(m_CurTok.value.value()) != Types.end()) types.push_back(advance().value.value());
+    return types;
   }
 
 }

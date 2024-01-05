@@ -10,6 +10,15 @@
 #include <map>
 #include <memory>
 
+// =============== [ AST Nodes ] ===============
+//  Statements:
+//   - Variable Declaration Statement
+//  Expressions:
+//   - Identifier Expression
+//   - Number Literal Expression
+//   - Binary Expression
+// =============== [ AST Nodes ] ===============
+
 namespace UraniumLang {
 
   class StmtNode {
@@ -26,6 +35,7 @@ namespace UraniumLang {
   private:
   };
 
+  // =============== [ Exprs ] ===============
   class IdentExpr : public ExprNode {
   public:
     IdentExpr(const std::string &symbol) : m_Symbol(symbol) {}
@@ -51,6 +61,17 @@ namespace UraniumLang {
     uptr<ExprNode> m_Left{}, m_Right{};
     Token::Type m_Op{};
   };
+  // =============== [ Exprs ] ===============
+
+  // =============== [ Stmts ] ===============
+  class VarDeclStmt : public StmtNode {
+  public:
+    VarDeclStmt(Token ident, uptr<ExprNode> value) : m_Ident(ident), m_Value(std::move(value)) {}
+    virtual const std::string &kind() override { return "VarDeclStmt"; }
+  private:
+    Token m_Ident{};
+    uptr<ExprNode> m_Value{};
+  };
 
   class ProgNode : public StmtNode {
   public:
@@ -62,6 +83,7 @@ namespace UraniumLang {
   private:
     std::vector<uptr<StmtNode>> m_Stmts{};
   };
+  // =============== [ Stmts ] ===============
 
   // TODO: add opdef (void op()() {})
   inline static std::map<Token::Type, int> BinopPrecedence = {
@@ -71,7 +93,9 @@ namespace UraniumLang {
     { Token::Type::TOKN_FSLASH, 20 }, // Div
   };
 
-  inline static std::map<std::string, std::string> Types = { // TODO: add typedef
+  // TODO: add typedef
+  inline static std::map<std::string, std::string> Types = { // name | type (known for compiler and interpreter)
+    { "const", "_const" },
     { "int", "int" },
     { "double", "double" },
     { "char", "char" },
@@ -79,8 +103,8 @@ namespace UraniumLang {
   };
 
   static int GetTokPrecedence(Token::Type type) {
+    if (BinopPrecedence.find(type) == BinopPrecedence.end()) return -1;
     int TokPrec = BinopPrecedence[type];
-
     return TokPrec;
   }
 
@@ -99,8 +123,10 @@ namespace UraniumLang {
   void Initialize();
   
   uptr<StmtNode> ParseStmt();
+  uptr<StmtNode> ParseVarDecl();
   uptr<ExprNode> ParseExpr();
   uptr<ExprNode> ParsePrimExpr();
+  std::vector<std::string> ParseType();
 
   private:
 
@@ -115,6 +141,12 @@ namespace UraniumLang {
   inline Token advance() {
     Token tokn = m_CurTok;
     if (m_Tokens.size() > (m_Index+1)) m_CurTok = m_Tokens[++m_Index];
+    return tokn;
+  }
+
+  inline Token expect(Token::Type type) {
+    auto tokn = advance();
+    if (tokn.type != type) throw std::runtime_error("Expected token \"" + Token::ToString(type) + "\", but instead got token \"" + Token::ToString(tokn.type) + "\"!");
     return tokn;
   }
   
