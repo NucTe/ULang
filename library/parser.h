@@ -24,14 +24,12 @@ namespace UraniumLang {
   class StmtNode {
   public:
     virtual ~StmtNode() = default;
-    virtual const std::string &kind() = 0;
   private:
   };
 
   class ExprNode : public StmtNode {
   public:
     virtual ~ExprNode() = default;
-    virtual const std::string &kind() = 0;
   private:
   };
 
@@ -39,7 +37,6 @@ namespace UraniumLang {
   class IdentExpr : public ExprNode {
   public:
     IdentExpr(const std::string &symbol) : m_Symbol(symbol) {}
-    virtual const std::string &kind() override { return "IdentExpr"; }
   private:
     std::string m_Symbol{};
   };
@@ -47,7 +44,13 @@ namespace UraniumLang {
   class NumLitExpr : public ExprNode {
   public:
     NumLitExpr(const Token &value) : m_Value(value) {}
-    virtual const std::string &kind() override { return "NumLitExpr"; }
+  private:
+    Token m_Value;
+  };
+
+  class StrLitExpr : public ExprNode {
+  public:
+    StrLitExpr(const Token &value) : m_Value(value) {}
   private:
     Token m_Value;
   };
@@ -56,10 +59,16 @@ namespace UraniumLang {
   public:
     BinExpr(uptr<ExprNode> left, uptr<ExprNode> right, Token::Type op)
       : m_Left(std::move(left)), m_Right(std::move(right)), m_Op(op) {}
-    virtual const std::string &kind() override { return "BinExpr"; }
   private:
     uptr<ExprNode> m_Left{}, m_Right{};
     Token::Type m_Op{};
+  };
+
+  class AssignmentExpr : public ExprNode {
+  public:
+    AssignmentExpr(uptr<ExprNode> assigne, uptr<ExprNode> value) : m_Assigne(std::move(assigne)), m_Value(std::move(value)) {}
+  private:
+    uptr<ExprNode> m_Assigne{}, m_Value{};
   };
   // =============== [ Exprs ] ===============
 
@@ -67,7 +76,6 @@ namespace UraniumLang {
   class VarDeclStmt : public StmtNode {
   public:
     VarDeclStmt(Token ident, uptr<ExprNode> value) : m_Ident(ident), m_Value(std::move(value)) {}
-    virtual const std::string &kind() override { return "VarDeclStmt"; }
   private:
     Token m_Ident{};
     uptr<ExprNode> m_Value{};
@@ -78,7 +86,6 @@ namespace UraniumLang {
     ProgNode(std::vector<uptr<StmtNode>> stmts)
       : m_Stmts(std::move(stmts)) {}
 
-    virtual const std::string &kind() override { return "ProgNode"; }
     inline const std::vector<uptr<StmtNode>> &GetStatements() { return m_Stmts; }
   private:
     std::vector<uptr<StmtNode>> m_Stmts{};
@@ -86,6 +93,17 @@ namespace UraniumLang {
   // =============== [ Stmts ] ===============
 
   // TODO: add opdef (void op()() {})
+  //       Example:
+  /*
+   class Cat {
+   public:
+     // Code...
+     void opdef()() {
+       Print("Meow");
+     }
+     // ...Code
+   };
+  */
   inline static std::map<Token::Type, int> BinopPrecedence = {
     { Token::Type::TOKN_PLUS, 10 },   // Add
     { Token::Type::TOKN_MINUS, 10 },  // Sub
@@ -125,6 +143,8 @@ namespace UraniumLang {
   uptr<StmtNode> ParseStmt();
   uptr<StmtNode> ParseVarDecl();
   uptr<ExprNode> ParseExpr();
+  uptr<ExprNode> ParseBinExpr();
+  uptr<ExprNode> ParseAssignmentExpr();
   uptr<ExprNode> ParsePrimExpr();
   std::vector<std::string> ParseType();
 
