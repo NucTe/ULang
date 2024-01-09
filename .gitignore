@@ -2,3 +2,4 @@ bin/
 compiler/ulang
 */.a
 build/
+llvm-project/

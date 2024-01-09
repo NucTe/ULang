@@ -87,7 +87,8 @@
     "*.ipp": "cpp",
     "any": "cpp",
     "regex": "cpp",
-    "scoped_allocator": "cpp"
+    "scoped_allocator": "cpp",
+    "*.inc": "cpp"
   },
   "C_Cpp.default.compilerPath": "/usr/bin/clang++"
 }
