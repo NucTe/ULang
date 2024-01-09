@@ -97,11 +97,11 @@ namespace UraniumLang {
   /*
    class Cat {
    public:
-     // Code...
+     // ...Code
      void opdef()() {
        Print("Meow");
      }
-     // ...Code
+     // Code...
    };
   */
   inline static std::map<Token::Type, int> BinopPrecedence = {
@@ -112,12 +112,12 @@ namespace UraniumLang {
   };
 
   // TODO: add typedef
+  // TODO: Once compiler compiles, pass types to compiler
   inline static std::map<std::string, std::string> Types = { // name | type (known for compiler and interpreter)
     { "const", "_const" },
     { "int", "int" },
     { "double", "double" },
     { "char", "char" },
-    // { "int", "int" },
   };
 
   static int GetTokPrecedence(Token::Type type) {

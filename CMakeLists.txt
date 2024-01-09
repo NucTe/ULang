@@ -16,8 +16,7 @@ file(GLOB LIB_SRCS library/*.cpp)
 add_library(ulang_lib STATIC ${LIB_SRCS})
 set_target_properties(ulang_lib PROPERTIES OUTPUT_NAME "ulang")
 
-file(GLOB COMP_SRCS compiler/*.cpp)
-add_executable(ulang ${COMP_SRCS})
+add_executable(ulang compiler/compiler.cpp compiler/main.cpp)
 target_link_libraries(ulang ulang_lib ${LLVM_LIBRARIES} ${LLVM_SYSTEM_LIBS} LLVMCore LLVMIRReader LLVMBitReader LLVMBitWriter LLVMCodeGen LLVMScalarOpts)
 
 target_include_directories(ulang_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/library)
